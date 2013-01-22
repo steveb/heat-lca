@@ -1,0 +1,112 @@
+#!/usr/bin/env python
+
+import wikitools
+import poster
+import os
+import shutil
+from random import randint
+
+wiki_url = "http://192.168.1.225/wiki/api.php"
+wiki_username = "WikiSysop"
+wiki_password = "kitty"
+
+punctuation = [' ', ', ', '. ', '! ']
+punctuation_limit = len(punctuation) - 1
+words = [
+        "meow",
+        "purr",
+        "zzz",
+        "scratched",
+        "lick",
+        "hairball",
+        "catnip",
+        "stretching",
+        "eat the grass",
+        "run",
+        "toss the mousie",
+        "leap",
+        "sunbathe",
+        "judging you",
+        "jump on the table",
+        "stuck in a tree",
+        "claw",
+        "hiss",
+        "eat",
+        "kittens",
+        "attack",
+        "feed me",
+        "sleep on your face",
+        "attack your ankles",
+        "chuf",
+        "bat",
+        "lay down in your way",
+        "chase the red dot",
+        "sniff",
+        "knock over the lamp",
+        "jump",
+        "climb the curtains",
+        "sleep on your keyboard",
+        "rip the couch",
+        "sleep in the sink",
+        "give me fish",
+        "fluffy fur",
+        "shed everywhere",
+        "biting",
+        "sleeping in the sink",
+        "scottish fold",
+        "ragdoll",
+        "persian",
+        "tabby",
+        "siamese",
+        "long hair",
+        "short hair",
+        "medium hair",
+        "making biscuits",
+        "headbutt"]
+word_limit = len(words) - 1
+
+path = './images/'
+
+def generate_title():
+    return words[randint(0, word_limit)]
+
+def generate_content(num_chunks=5):
+    content = ''
+    capital_next = True
+    for chunk in range(num_chunks):
+        word = words[randint(0, word_limit)]
+        if capital_next:
+            word = word.capitalize()
+        content += word 
+        p = punctuation[randint(0, punctuation_limit)]
+        content += p
+        capital_next = p in ('. ', '! ')
+    return content
+
+def uploadphoto(wiki, image):
+    file_name = image.split(".")[-2]
+    caption = file_name
+    print "Uploading the Image " + file_name
+    image_object = open(path + image, "r")
+    picture = wikitools.wikifile.File(wiki=wiki, title=file_name)
+    picture.upload(fileobj=image_object, comment=caption, ignorewarnings=True)
+    print "Uploaded the Image " + file_name
+
+    page_name = generate_title().replace(" ", "_")
+
+    page = wikitools.Page(wiki, page_name, followRedir=True)
+    wikidata = '== %s ==\n=== %s ===\n%s\n----\n[[File:%s|180px]]' % (
+        generate_content(2), generate_content(3), generate_content(10), image)
+    print "page text: %s" % wikidata
+    print "Edit result %s" % page.edit(text=wikidata)
+
+def main():
+    wiki = wikitools.wiki.Wiki(wiki_url)
+    wiki.login(username=wiki_username, password=wiki_password)
+    listing = sorted(os.listdir(path))
+    for file in listing:
+        if file.split(".")[-1] in ('jpg', 'jpeg'):
+            uploadphoto(wiki, file)
+
+if __name__ == '__main__':
+    main()
