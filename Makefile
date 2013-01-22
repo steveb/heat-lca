@@ -2,11 +2,13 @@ HEAT_DISTRO=F17
 HEAT_BIN=heat
 
 HEAT_FLAVOR=m1.large
-
+HEAT_NAME=catipedia
 
 HEAT_TEMPLATE=mediawiki-swift.yaml
 HEAT_CREATE_PARAMS=InstanceType=$(HEAT_FLAVOR);KeyName=heat_key;LinuxDistribution=$(HEAT_DISTRO)
 
+
+heat-all: heat-keypair heat-secomp heat-create
 
 heat-keypair:
 	nova keypair-add heat_key > heat_key.priv
@@ -22,7 +24,6 @@ heat-secomp:
 	nova secgroup-add-rule https tcp 443 443 0.0.0.0/0
 
 heat-create:
-	$(HEAT_BIN) stack-create teststack --template-file=$(HEAT_TEMPLATE) \
+	$(HEAT_BIN) stack-create $(HEAT_NAME) --template-file=$(HEAT_TEMPLATE) \
 	--parameters="$(HEAT_CREATE_PARAMS)"
 
-heat-all: heat-flavor heat-keypair heat-create
