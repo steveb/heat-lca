@@ -49,10 +49,6 @@ Parameters:
     Description: Username for the keystone account used for storage
     Type: String
 
-  SwiftRoot:
-    Default: http://192.168.1.101:8080/v1/AUTH_fc441a7ec89d490483c39f7e12ce249d
-    Type: String
-
   MWPassword:
     Default: kitty
     Description: The MediaWiki admin password
@@ -142,28 +138,31 @@ Resources:
   PublicContainer:
     Type: OS::Swift::Container
     Properties:
-      name: Fn::Join:
-            - '-'
-            - - {Ref: SiteId}
-              - 'public'
+      name:
+        Fn::Join:
+        - '-'
+        - - {Ref: SiteId}
+          - 'public'
       X-Container-Read: .r:*
 
   ThumbContainer:
     Type: OS::Swift::Container
     Properties:
-      name: Fn::Join:
-            - '-'
-            - - {Ref: SiteId}
-              - 'thumb'
+      name:
+        Fn::Join:
+        - '-'
+        - - {Ref: SiteId}
+          - 'thumb'
       X-Container-Read: .r:*
 
   TempContainer:
     Type: OS::Swift::Container
     Properties:
-      name: Fn::Join:
-            - '-'
-            - - {Ref: SiteId}
-              - 'temp'
+      name:
+        Fn::Join:
+        - '-'
+        - - {Ref: SiteId}
+          - 'temp'
       X-Container-Read: .r:*
 
   # This is only to demonstrate deletion policy and 
@@ -264,7 +263,10 @@ Resources:
                 $wgFileBackends[]  =  array(
                         'name'                => 'localSwift',
                         'class'               => 'SwiftFileBackend',
-                        'wikiId'              => 'catbox',
+                        'wikiId'              => '
+            - {Ref: SiteId}
+            - |-
+                ',
                         'lockManager'         => 'nullLockManager',
                         'swiftAuthUrl'        => $wgSwiftConf['authUrl'],
                         'swiftUser'           => $wgSwiftConf['user'],
@@ -280,7 +282,7 @@ Resources:
                         'scriptDirUrl'       => $wgScriptPath,
                         'scriptExtension'    => $wgScriptExtension,
                         'url'                => '
-            - {Ref: SwiftRoot}
+            - Fn::GetAtt: [PublicContainer, RootURL]
             - |-
                 ',
                         'hashLevels'         => 0,
