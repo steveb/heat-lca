@@ -1,0 +1,103 @@
+HeatTemplateFormatVersion: '2012-12-12'
+Description: 'A demonstration of running mediawiki with uploads backed by Swift file storage'
+Parameters:
+  KeyName:
+    Description: Name of an existing EC2 KeyPair to enable SSH access to the instances
+    Type: String
+  InstanceType:
+    Description: WebServer EC2 instance type
+    Type: String
+    Default: m1.large
+    AllowedValues: [t1.micro, m1.small, m1.large, m1.xlarge, m2.xlarge,
+      m2.2xlarge, m2.4xlarge, c1.medium, c1.xlarge, cc1.4xlarge]
+    ConstraintDescription: must be a valid EC2 instance type.
+  MWUsername: {Default: WikiSysop, NoEcho: 'true',
+    Description: The MediaWiki admin username, Type: String,
+    MinLength: '1', MaxLength: '16', AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*',
+    ConstraintDescription: must begin with a letter and contain only
+      alphanumeric characters.}
+  MWPassword: {Default: kitty, NoEcho: 'true',
+    Description: The MediaWiki admin password, Type: String,
+    MinLength: '1', MaxLength: '41', AllowedPattern: '[a-zA-Z0-9]*',
+    ConstraintDescription: must contain only alphanumeric characters.}
+  DBName: {Default: my_wiki, Description: The
+      WordPress database name, Type: String, MinLength: '1',
+    MaxLength: '64', AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*',
+    ConstraintDescription: must begin with a letter and contain only
+      alphanumeric characters.}
+  DBUsername: {Default: admin, NoEcho: 'true',
+    Description: The WordPress database admin account username, Type: String,
+    MinLength: '1', MaxLength: '16', AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*',
+    ConstraintDescription: must begin with a letter and contain only
+      alphanumeric characters.}
+  DBPassword: {Default: admin, NoEcho: 'true',
+    Description: The WordPress database admin account password, Type: String,
+    MinLength: '1', MaxLength: '41', AllowedPattern: '[a-zA-Z0-9]*',
+    ConstraintDescription: must contain only alphanumeric characters.}
+  DBRootPassword: {Default: root, NoEcho: 'true',
+    Description: Root password for MySQL, Type: String,
+    MinLength: '1', MaxLength: '41', AllowedPattern: '[a-zA-Z0-9]*',
+    ConstraintDescription: must contain only alphanumeric characters.}
+  LinuxDistribution:
+    Default: F17
+    Description: Distribution of choice
+    Type: String
+    AllowedValues: [F17]
+Mappings:
+  AWSInstanceType2Arch:
+    t1.micro: {Arch: '32'}
+    m1.small: {Arch: '32'}
+    m1.large: {Arch: '64'}
+    m1.xlarge: {Arch: '64'}
+    m2.xlarge: {Arch: '64'}
+    m2.2xlarge: {Arch: '64'}
+    m2.4xlarge: {Arch: '64'}
+    c1.medium: {Arch: '32'}
+    c1.xlarge: {Arch: '64'}
+    cc1.4xlarge: {Arch: '64'}
+  DistroArch2AMI:
+    F17: {'32': F17-i386-cfntools-demo, '64': F17-x86_64-cfntools-demo}
+Resources:
+  WikiDatabase:
+    Type: AWS::EC2::Instance
+    Metadata:
+      AWS::CloudFormation::Init:
+        config:
+          services:
+            systemd:
+              mysqld: {enabled: 'true', ensureRunning: 'true'}
+              httpd: {enabled: 'true', ensureRunning: 'true'}
+    Properties:
+      ImageId:
+        Fn::FindInMap:
+        - DistroArch2AMI
+        - {Ref: LinuxDistribution}
+        - Fn::FindInMap:
+          - AWSInstanceType2Arch
+          - {Ref: InstanceType}
+          - Arch
+      InstanceType: {Ref: InstanceType}
+      KeyName: {Ref: KeyName}
+      UserData:
+        Fn::Base64:
+          Fn::Join:
+          - ''
+          - - |-
+                #!/bin/bash -v
+                /opt/aws/bin/cfn-init
+                
+                setenforce Permissive
+                cd ~/files
+                tar -xzf mediawiki-1.20.2.tar.gz
+                rm -rf wiki
+                mv mediawiki-1.20.2 wiki
+                cp -r SwiftCloudFiles wiki/extensions/
+
+                # Setup MySQL root password and create a user
+                mysqladmin -u root password '
+            - {Ref: DBRootPassword}
+            - |-
+                '
+                cd /var/www/html/wiki
+                php maintenance/install.php --conf LocalSettings.php --wiki catipedia --dbuser root --dbpass root --pass kitty catipedia WikiSysop
+
