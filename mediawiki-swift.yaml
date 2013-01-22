@@ -1,9 +1,11 @@
 HeatTemplateFormatVersion: '2012-12-12'
 Description: 'A demonstration of running mediawiki with uploads backed by Swift file storage'
+
 Parameters:
   KeyName:
     Description: Name of an existing EC2 KeyPair to enable SSH access to the instances
     Type: String
+
   InstanceType:
     Description: WebServer EC2 instance type
     Type: String
@@ -11,38 +13,99 @@ Parameters:
     AllowedValues: [t1.micro, m1.small, m1.large, m1.xlarge, m2.xlarge,
       m2.2xlarge, m2.4xlarge, c1.medium, c1.xlarge, cc1.4xlarge]
     ConstraintDescription: must be a valid EC2 instance type.
-  MWUsername: {Default: WikiSysop, NoEcho: 'true',
-    Description: The MediaWiki admin username, Type: String,
-    MinLength: '1', MaxLength: '16', AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*',
+
+  AuthServer:
+    Default: http://192.168.1.101:5000/v2.0
+    Type: String
+    Description: URL to the Keystone authentication server
+
+  MWUsername:
+    Default: WikiSysop
+    Description: The MediaWiki admin username
+    Type: String
+    MinLength: '1'
+    MaxLength: '16'
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
     ConstraintDescription: must begin with a letter and contain only
-      alphanumeric characters.}
-  MWPassword: {Default: kitty, NoEcho: 'true',
-    Description: The MediaWiki admin password, Type: String,
-    MinLength: '1', MaxLength: '41', AllowedPattern: '[a-zA-Z0-9]*',
-    ConstraintDescription: must contain only alphanumeric characters.}
-  DBName: {Default: my_wiki, Description: The
-      WordPress database name, Type: String, MinLength: '1',
-    MaxLength: '64', AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*',
+      alphanumeric characters.
+
+  SiteName:
+    Default: Catipedia
+    Description: The name of the MediaWiki site
+    Type: String
+
+  SiteId:
+    Default: catipedia
+    Description: The wiki ID of the MediaWiki site
+    Type: String
+
+  SwiftPassword:
+    Default: password
+    Description: Password for the keystone account used for storage
+    Type: String
+
+  SwiftUser:
+    Default: demo:fc441a7ec89d490483c39f7e12ce249d
+    Description: Username for the keystone account used for storage
+    Type: String
+
+  SwiftRoot:
+    Default: http://192.168.1.101:8080/v1/AUTH_fc441a7ec89d490483c39f7e12ce249d
+    Type: String
+
+  MWPassword:
+    Default: kitty
+    Description: The MediaWiki admin password
+    Type: String
+    MinLength: '1'
+    MaxLength: '41'
+    AllowedPattern: '[a-zA-Z0-9]*'
+    ConstraintDescription: must contain only alphanumeric characters.
+
+  DBName:
+    Default: my_wiki
+    Description: The MediaWiki database name
+    Type: String
+    MinLength: '1'
+    MaxLength: '64'
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9_]*'
     ConstraintDescription: must begin with a letter and contain only
-      alphanumeric characters.}
-  DBUsername: {Default: admin, NoEcho: 'true',
-    Description: The WordPress database admin account username, Type: String,
-    MinLength: '1', MaxLength: '16', AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*',
+      alphanumeric characters.
+
+  DBUsername:
+    Default: admin
+    Description: The MediaWiki database admin account username
+    Type: String
+    MinLength: '1'
+    MaxLength: '16'
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
     ConstraintDescription: must begin with a letter and contain only
-      alphanumeric characters.}
-  DBPassword: {Default: admin, NoEcho: 'true',
-    Description: The WordPress database admin account password, Type: String,
-    MinLength: '1', MaxLength: '41', AllowedPattern: '[a-zA-Z0-9]*',
-    ConstraintDescription: must contain only alphanumeric characters.}
-  DBRootPassword: {Default: root, NoEcho: 'true',
-    Description: Root password for MySQL, Type: String,
-    MinLength: '1', MaxLength: '41', AllowedPattern: '[a-zA-Z0-9]*',
-    ConstraintDescription: must contain only alphanumeric characters.}
+      alphanumeric characters.
+
+  DBPassword:
+    Default: admin
+    Description: The MediaWiki database admin account password
+    Type: String
+    MinLength: '1'
+    MaxLength: '41'
+    AllowedPattern: '[a-zA-Z0-9]*'
+    ConstraintDescription: must contain only alphanumeric characters.
+
+  DBRootPassword:
+    Default: root
+    Description: Root password for MySQL
+    Type: String
+    MinLength: '1'
+    MaxLength: '41'
+    AllowedPattern: '[a-zA-Z0-9]*'
+    ConstraintDescription: must contain only alphanumeric characters.
+
   LinuxDistribution:
     Default: F17
     Description: Distribution of choice
     Type: String
     AllowedValues: [F17]
+
 Mappings:
   AWSInstanceType2Arch:
     t1.micro: {Arch: '32'}
@@ -57,8 +120,60 @@ Mappings:
     cc1.4xlarge: {Arch: '64'}
   DistroArch2AMI:
     F17: {'32': F17-i386-cfntools-demo, '64': F17-x86_64-cfntools-demo}
+
 Resources:
-  WikiDatabase:
+  IPAddress: {Type: 'AWS::EC2::EIP'}
+
+  IPAssoc:
+    Type: AWS::EC2::EIPAssociation
+    Properties:
+      InstanceId: {Ref: MediaWikiServer}
+      EIP: {Ref: IPAddress}
+
+  WebServerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable HTTP access via port 80 plus SSH access
+      SecurityGroupIngress:
+      - {CidrIp: 0.0.0.0/0, FromPort: '-1', IpProtocol: icmp, ToPort: '-1'}
+      - {CidrIp: 0.0.0.0/0, FromPort: '80', IpProtocol: tcp, ToPort: '80'}
+      - {CidrIp: 0.0.0.0/0, FromPort: '22', IpProtocol: tcp, ToPort: '22'}
+
+  PublicContainer:
+    Type: OS::Swift::Container
+    Properties:
+      name: Fn::Join:
+            - '-'
+            - - {Ref: SiteId}
+              - 'public'
+      X-Container-Read: .r:*
+
+  ThumbContainer:
+    Type: OS::Swift::Container
+    Properties:
+      name: Fn::Join:
+            - '-'
+            - - {Ref: SiteId}
+              - 'thumb'
+      X-Container-Read: .r:*
+
+  TempContainer:
+    Type: OS::Swift::Container
+    Properties:
+      name: Fn::Join:
+            - '-'
+            - - {Ref: SiteId}
+              - 'temp'
+      X-Container-Read: .r:*
+
+  # This is only to demonstrate deletion policy and 
+  # unique name assignment
+  AnotherContainer:
+    Type: OS::Swift::Container
+    Properties:
+      DeletionPolicy: Retain
+
+  MediaWikiServer:
     Type: AWS::EC2::Instance
     Metadata:
       AWS::CloudFormation::Init:
@@ -78,6 +193,9 @@ Resources:
           - Arch
       InstanceType: {Ref: InstanceType}
       KeyName: {Ref: KeyName}
+      DependsOn : PublicContainer
+      SecurityGroups:
+      - {Ref: WebServerSecurityGroup}
       UserData:
         Fn::Base64:
           Fn::Join:
@@ -92,12 +210,95 @@ Resources:
                 rm -rf wiki
                 mv mediawiki-1.20.2 wiki
                 cp -r SwiftCloudFiles wiki/extensions/
-
+                
+                chown -R apache:apache wiki
+                rm -rf /var/www/html/wiki
+                cp -r wiki /var/www/html/
+                
+                mkdir -p /var/lib/php/session
+                chown apache:apache /var/lib/php/session
+                
                 # Setup MySQL root password and create a user
-                mysqladmin -u root password '
+                mysqladmin -u root password 
             - {Ref: DBRootPassword}
             - |-
-                '
+                
                 cd /var/www/html/wiki
-                php maintenance/install.php --conf LocalSettings.php --wiki catipedia --dbuser root --dbpass root --pass kitty catipedia WikiSysop
-
+                php maintenance/install.php --conf LocalSettings.php --wiki 
+            - {Ref: SiteId}
+            - ' --dbuser root --dbpass '
+            - {Ref: DBRootPassword}
+            - ' --pass '
+            - {Ref: MWPassword}
+            - ' "'
+            - {Ref: SiteName}
+            - '" '
+            - {Ref: MWUsername}
+            - |-
+                
+                cat << "EOM" >> LocalSettings.php
+                $wgServer           = "http://
+            - {Ref: IPAddress}
+            - |-
+                ";
+                $wgEnableUploads  = true;
+                $wgGenerateThumbnailOnParse = true;
+                $wgFileExtensions = array('png','gif','jpg','jpeg','svg','psd','ai','doc','xls','mpp','pdf','ppt','tiff','bmp','docx', 'xlsx', 'pptx','ps','odt','ods','odp','odg','txt');
+                
+                require_once( "$IP/extensions/SwiftCloudFiles/SwiftCloudFiles.php" );
+                
+                $wgSwiftConf = array(
+                     'authUrl' => '
+            - {Ref: AuthServer}
+            - |-
+                ',  //This the the url for your authentication server. For Rackspace Cloud Files, this would be auth.api.rackspacecloud.com
+                     'user' => '
+            - {Ref: SwiftUser}
+            - |-
+                ',              //Some swift authentications require a username to be used with the account or tenant id, ie 'username:tenant'
+                     'key' => '
+            - {Ref: SwiftPassword}
+            - |-
+                ' );               //The API Key for used for authentication
+                
+                $wgFileBackends[]  =  array(
+                        'name'                => 'localSwift',
+                        'class'               => 'SwiftFileBackend',
+                        'wikiId'              => 'catbox',
+                        'lockManager'         => 'nullLockManager',
+                        'swiftAuthUrl'        => $wgSwiftConf['authUrl'],
+                        'swiftUser'           => $wgSwiftConf['user'],
+                        'swiftKey'            => $wgSwiftConf['key'],
+                        'swiftUseCDN'         => false,
+                        #'readOnly'          =>  'Temporary planned maintenence for 5 min',
+                       'parallelize'         => 'implicit'
+                );
+                $wgLocalFileRepo  =  array(
+                        'class'              => 'LocalRepo',
+                        'name'               => 'local',
+                        'backend'            => 'localSwift',
+                        'scriptDirUrl'       => $wgScriptPath,
+                        'scriptExtension'    => $wgScriptExtension,
+                        'url'                => '
+            - {Ref: SwiftRoot}
+            - |-
+                ',
+                        'hashLevels'         => 0,
+                        'deletedHashLevels'  => 0,
+                        'zones'             =>  array(      //Change container and url values to match your Swift provider configuration settings
+                                'public'  =>  array( 'container' =>  'public', 'url' =>  '
+            - Fn::GetAtt: [PublicContainer, WebsiteURL]
+            - |-
+                ' ),
+                                'thumb'   =>  array( 'container' =>  'thumb',  'url' =>  '
+            - Fn::GetAtt: [ThumbContainer, WebsiteURL]
+            - |-
+                ' ),
+                                'temp'    =>  array( 'container' =>  'temp', 'url' =>  '
+            - Fn::GetAtt: [TempContainer, WebsiteURL]
+            - |-
+                ' ),
+                                'deleted' =>  array( 'container' =>  'deleted' ), // deleted items don't have a URL
+                        )
+                );
+                EOM
