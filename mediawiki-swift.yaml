@@ -19,21 +19,6 @@ Parameters:
     Type: String
     Description: URL to the Keystone authentication server
 
-  MWUsername:
-    Default: WikiSysop
-    Description: The MediaWiki admin username
-    Type: String
-    MinLength: '1'
-    MaxLength: '16'
-    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
-    ConstraintDescription: must begin with a letter and contain only
-      alphanumeric characters.
-
-  SiteName:
-    Default: Catipedia
-    Description: The name of the MediaWiki site
-    Type: String
-
   SiteId:
     Default: catipedia
     Description: The wiki ID of the MediaWiki site
@@ -45,42 +30,13 @@ Parameters:
     Type: String
 
   SwiftUser:
-    Default: demo:fc441a7ec89d490483c39f7e12ce249d
+    Default: demo
     Description: Username for the keystone account used for storage
     Type: String
 
   MWPassword:
     Default: kitty
     Description: The MediaWiki admin password
-    Type: String
-    MinLength: '1'
-    MaxLength: '41'
-    AllowedPattern: '[a-zA-Z0-9]*'
-    ConstraintDescription: must contain only alphanumeric characters.
-
-  DBName:
-    Default: my_wiki
-    Description: The MediaWiki database name
-    Type: String
-    MinLength: '1'
-    MaxLength: '64'
-    AllowedPattern: '[a-zA-Z][a-zA-Z0-9_]*'
-    ConstraintDescription: must begin with a letter and contain only
-      alphanumeric characters.
-
-  DBUsername:
-    Default: admin
-    Description: The MediaWiki database admin account username
-    Type: String
-    MinLength: '1'
-    MaxLength: '16'
-    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
-    ConstraintDescription: must begin with a letter and contain only
-      alphanumeric characters.
-
-  DBPassword:
-    Default: admin
-    Description: The MediaWiki database admin account password
     Type: String
     MinLength: '1'
     MaxLength: '41'
@@ -229,10 +185,7 @@ Resources:
             - {Ref: DBRootPassword}
             - ' --pass '
             - {Ref: MWPassword}
-            - ' "'
-            - {Ref: SiteName}
-            - '" '
-            - {Ref: MWUsername}
+            - ' "Catipedia" WikiSysop '
             - |-
                 
                 cat << "EOM" >> LocalSettings.php
@@ -246,6 +199,13 @@ Resources:
                 
                 require_once( "$IP/extensions/SwiftCloudFiles/SwiftCloudFiles.php" );
                 
+                $swiftRoot = "
+            - Fn::GetAtt: [PublicContainer, RootURL]
+            - |-
+                ";
+                $swiftRootParts = explode("AUTH_", $swiftRoot);
+                $swiftTenantId = $swiftRootParts[1];
+                
                 $wgSwiftConf = array(
                      'authUrl' => '
             - {Ref: AuthServer}
@@ -254,7 +214,7 @@ Resources:
                      'user' => '
             - {Ref: SwiftUser}
             - |-
-                ',              //Some swift authentications require a username to be used with the account or tenant id, ie 'username:tenant'
+                :' . $swiftTenantId,              //Some swift authentications require a username to be used with the account or tenant id, ie 'username:tenant'
                      'key' => '
             - {Ref: SwiftPassword}
             - |-
@@ -281,10 +241,7 @@ Resources:
                         'backend'            => 'localSwift',
                         'scriptDirUrl'       => $wgScriptPath,
                         'scriptExtension'    => $wgScriptExtension,
-                        'url'                => '
-            - Fn::GetAtt: [PublicContainer, RootURL]
-            - |-
-                ',
+                        'url'                => $swiftRoot,
                         'hashLevels'         => 0,
                         'deletedHashLevels'  => 0,
                         'zones'             =>  array(      //Change container and url values to match your Swift provider configuration settings
@@ -304,3 +261,18 @@ Resources:
                         )
                 );
                 EOM
+Outputs:
+  WebsiteURL:
+    Value:
+      Fn::Join:
+      - ''
+      - - http://
+        - {Ref: IPAddress}
+        - /wiki/
+    Description: URL for Catipedia
+  CatCount:
+    Value:
+      Fn::GetAtt: [PublicContainer, ObjectCount]
+  PublicContainerHeaders:
+    Value:
+      Fn::GetAtt: [PublicContainer, HeadContainer]
