@@ -1,0 +1,54 @@
+<template>
+  <name>F17-x86_64-cfntools-demo</name>
+  <os>
+    <name>Fedora</name>
+    <version>17</version>
+    <arch>x86_64</arch>
+    <install type='iso'>
+      <iso>http://download.fedoraproject.org/pub/fedora/linux/releases/17/Fedora/x86_64/iso/Fedora-17-x86_64-DVD.iso</iso>
+    </install>
+  </os>
+  <description>Fedora 17</description>
+  <repositories>
+    <repository name='fedora-heat-trunk'>
+      <url>http://repos.fedorapeople.org/repos/heat/heat-trunk/fedora-17/$basearch/</url>
+    </repository>
+  </repositories>
+  <packages>
+    <package name="cloud-init"/>
+    <package name="git"/>
+    <package name="python-psutil"/>
+    <package name="heat-cfntools"/>
+    <package name="mysql"/>
+    <package name="mysql-server"/>
+    <package name="httpd"/>
+    <package name="php"/>
+    <package name="php-cli"/>
+    <package name="php-cloudfiles"/>
+    <package name="php-common"/>
+    <package name="php-gd"/>
+    <package name="php-pdo"/>
+    <package name="php-mbstring"/>
+    <package name="php-mysql"/>
+    <package name="php-xml"/>
+    <package name="ImageMagick"/>
+    <package name="wget"/>
+  </packages>
+  <commands>
+    <command name='user'>
+/usr/sbin/useradd ec2-user
+echo -e 'ec2-user\tALL=(ALL)\tNOPASSWD: ALL' >> /etc/sudoers
+    </command>
+    <command name='packages'>
+mkdir -p files
+pushd files
+wget http://download.wikimedia.org/mediawiki/1.20/mediawiki-1.20.2.tar.gz
+git clone git://github.com/steveb/SwiftCloudFiles.git
+popd
+
+yum -y update
+sed --in-place -e s/Type=oneshot/"Type=oneshot\nTimeoutSec=0"/ /lib/systemd/system/cloud-final.service
+    </command>
+  </commands>
+
+</template>
