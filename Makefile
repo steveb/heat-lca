@@ -2,7 +2,7 @@ HEAT_DISTRO=F17
 HEAT_BIN=heat
 
 HEAT_FLAVOR=m1.large
-HEAT_NAME=catipedia2
+HEAT_NAME=catipedia
 
 HEAT_TEMPLATE=mediawiki-swift.yaml
 HEAT_CREATE_PARAMS=InstanceType=$(HEAT_FLAVOR);KeyName=heat_key;LinuxDistribution=$(HEAT_DISTRO);SiteId=$(HEAT_NAME)
