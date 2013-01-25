@@ -5,8 +5,9 @@ HEAT_FLAVOR=m1.large
 HEAT_NAME=catipedia
 
 HEAT_TEMPLATE=mediawiki-swift.yaml
-HEAT_CREATE_PARAMS=InstanceType=$(HEAT_FLAVOR);KeyName=heat_key;LinuxDistribution=$(HEAT_DISTRO);SiteId=$(HEAT_NAME)
 
+AUTH_URL=$(shell keystone catalog --service identity | grep publicURL | awk '{print $$4}')
+HEAT_CREATE_PARAMS=InstanceType=$(HEAT_FLAVOR);KeyName=heat_key;LinuxDistribution=$(HEAT_DISTRO);SiteId=$(HEAT_NAME);AuthServer=$(AUTH_URL)
 
 heat-all: heat-keypair heat-secomp heat-create
 
@@ -27,3 +28,5 @@ heat-create:
 	$(HEAT_BIN) stack-create $(HEAT_NAME) --template-file=$(HEAT_TEMPLATE) \
 	--parameters="$(HEAT_CREATE_PARAMS)"
 
+auth:
+	echo "$(AUTH_URL)"
