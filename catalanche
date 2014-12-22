@@ -6,9 +6,9 @@ import os
 import shutil
 from random import randint
 
-wiki_url = "http://172.24.4.225/wiki/api.php"
+wiki_url = "http://192.168.1.225//wiki/api.php"
 wiki_username = "WikiSysop"
-wiki_password = "kitty"
+wiki_password = "password"
 
 punctuation = [' ', ', ', '. ', '! ']
 punctuation_limit = len(punctuation) - 1

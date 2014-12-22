@@ -137,6 +137,7 @@ Resources:
             systemd:
               mysqld: {enabled: 'true', ensureRunning: 'true'}
               httpd: {enabled: 'true', ensureRunning: 'true'}
+    DependsOn: PublicContainer
     Properties:
       ImageId:
         Fn::FindInMap:
@@ -148,7 +149,6 @@ Resources:
           - Arch
       InstanceType: {Ref: InstanceType}
       KeyName: {Ref: KeyName}
-      DependsOn : PublicContainer
       SecurityGroups:
       - {Ref: WebServerSecurityGroup}
       UserData:
