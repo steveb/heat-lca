@@ -18,7 +18,7 @@
 <meta name="viewport"
   content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
-<link rel="stylesheet" href="css/reveal.min.css">
+<link rel="stylesheet" href="css/reveal.css">
 <link rel="stylesheet" href="css/theme/default.css" id="theme">
 
 <!-- For syntax highlighting -->
@@ -72,6 +72,31 @@ See What Made These LCA Steampunk Cosplayers Scream
       </section>
 
       <section>
+        <h2>What is Heat?</h2>
+      </section>
+      <section>
+        <h2>Declarative Heat templates</h2>
+        <pre>
+        <code>heat_template_version: 2014-10-16
+parameters:
+  key_name:
+    type: string
+    default: heat_key
+
+resources:
+  server:
+    type: OS::Nova::Server
+    properties:
+      image: Fedora-x86_64-20-20140618-sda
+      flavor: m1.small
+      key_name: {get_param: key_name}
+
+outputs:
+  server_ip:
+    value: {get_attr: [server, first_address]}</code>
+        </pre>
+      </section>
+      <section>
         <h2>Declarative vs Procedural Orchestration</h2>
         <!-- TWEET: Declarative and Procedural Orchestration Explained. First You'll Be Shocked, Then You'll Be Inspired -->
 
@@ -79,16 +104,17 @@ See What Made These LCA Steampunk Cosplayers Scream
       </section>
 
       <section data-transition="linear">
+        <h2>Kubernetes vs Heat</h2>
+        <p>Heat is a REST service for the declarative orchestration
+          of multi-tenant cloud services.</p>
+        <p>Kubernetes is a REST service for the declarative
+          orchestration of containers.</p>
+      </section>
+
+      <section data-transition="linear">
         <h2>Orchestrating containers</h2>
       </section>
 
-      <section data-transition="linear">
-        <h2>Kubernetes vs Heat</h2>
-      </section>
-
-      <section data-transition="linear">
-        <h2>Docker in OpenStack</h2>
-      </section>
 
       <section>
         <h2>Images and Security</h2>
@@ -150,30 +176,133 @@ See What Made These LCA Steampunk Cosplayers Scream
       </section>
 
       <section>
-        <h2>Building the docker images</h2>
+        <h2>Building the docker image</h2>
+        <pre>
+          <code class="nohighlight">
+# heat-base-standalone/Dockerfile
+FROM fedora:20
+MAINTAINER Steve Baker &lt;steve@stevebaker.org>
+
+ADD heat /opt/heat
+ADD install-heat.sh /opt/install-heat.sh
+RUN /opt/install-heat.sh
+ADD config-heat.sh /opt/heat/config-heat.sh
+
+# heat-api-standalone/Dockerfile
+FROM stevebake/heat-base-standalone
+MAINTAINER Steve Baker &lt;steve@stevebaker.org>
+
+ADD ./start.sh /start.sh
+
+CMD ["/start.sh"]
+</code>
+</pre>
       </section>
 
       <section>
         <h2>Building the VM image</h2>
+        <ul>
+          <li>Built using <code>diskimage-builder</code></li>
+
+          <li>Uses the heat-config-kubelet element from the
+            heat-templates repository <br /> <a
+            href="https://github.com/openstack/heat-templates/tree/master/hot/software-config">https://github.com/openstack/heat-templates/tree/master/hot/software-config</a>
+          </li>
+          <li>Currently Fedora only (lots of systemd)</li>
+          <li>Includes a tar file of docker images for import on
+            boot</li>
+        </ul>
       </section>
 
-      <section data-markdown>
+      <section>
         <h2>Writing the heat template</h2>
-        <script type="text/template">
-```
-  server:
-    type: OS::Nova::Server
+        <pre>
+          <code class="nohighlight">  heat_pod_config:
+    type: OS::Heat::StructuredConfig
     properties:
-      image: {get_param: image}
-      flavor: {get_param: flavor}
-      key_name: {get_param: key_name}
-      user_data_format: SOFTWARE_CONFIG
-      security_groups:
-      - {get_resource: the_sg}
-      networks:
-      - network: {get_param: private_network}
-```
-        </script>
+      group: kubelet
+      config:
+        version: v1beta2
+        containers:
+
+        - name: rabbitmq
+          image: {get_input: rabbitmq_image}
+          ports:
+          - containerPort: 5672
+            hostPort: 5672
+
+        - name: mariadb
+          image: {get_input: mariadb_image}
+          ports:
+          - containerPort: 3306
+            hostPort: 3306
+          env:
+          - name: DB_ROOT_PASSWORD
+            value: {get_input: mariadb_password}
+          volumeMounts:
+            - name: mariadb-data
+              mountPath: /var/lib/mysql
+
+        - name: heat-engine
+          image: {get_input: heat_engine_image}
+          env:
+          - name: RABBIT_PASSWORD
+            value: guest
+          - name: DB_ROOT_PASSWORD
+            value: {get_input: mariadb_password}
+          - name: HEAT_DB_PASSWORD
+            value: {get_input: heatdb_password}
+          - name: KEYSTONE_PUBLIC_SERVICE_HOST
+            value: {get_input: keystone_host}
+          - name: AUTH_ENCRYPTION_KEY
+            value: {get_input: heat_auth_encryption_key}
+          - name: HEAT_API_SERVICE_HOST
+            value: {get_input: heat_api_service_host}
+          - name: OS_AUTH_URL
+            value: {get_input: os_auth_url}
+
+        - name: heat-api
+          image: {get_input: heat_api_image}
+          ports:
+          - containerPort: 8004
+            hostPort: 8004
+          env:
+          - name: RABBIT_PASSWORD
+            value: guest
+          - name: DB_ROOT_PASSWORD
+            value: {get_input: mariadb_password}
+          - name: HEAT_DB_PASSWORD
+            value: {get_input: heatdb_password}
+          - name: KEYSTONE_PUBLIC_SERVICE_HOST
+            value: {get_input: keystone_host}
+          - name: AUTH_ENCRYPTION_KEY
+            value: {get_input: heat_auth_encryption_key}
+          - name: HEAT_API_SERVICE_HOST
+            value: {get_input: heat_api_service_host}
+          - name: OS_AUTH_URL
+            value: {get_input: os_auth_url}
+        volumes:
+        - name: mariadb-data
+
+  heat_pod_deployment:
+    type: OS::Heat::StructuredDeployment
+    properties:
+      name: 20_apache_deployment
+      config:
+        get_resource: heat_pod_config
+      server:
+        get_resource: server
+      input_values:
+        mariadb_image: {get_param: mariadb_image}
+        mariadb_password: {get_resource: mariadb_password}
+        rabbitmq_image: {get_param: rabbitmq_image}
+        heat_api_image: {get_param: heat_api_image}
+        heat_engine_image: {get_param: heat_engine_image}
+        heatdb_password: {get_resource: heatdb_password}
+        heat_auth_encryption_key: {get_resource: heat_auth_encryption_key}
+        heat_api_service_host: {get_attr: [server, first_address]}
+        os_auth_url: {get_param: os_auth_url}</code>
+        </pre>
       </section>
 
       <section>
@@ -204,12 +333,25 @@ See What Made These LCA Steampunk Cosplayers Scream
         </ul>
       </section>
 
-      <section>
-        <h2>Docker? Rocket? Oh dear!</h2>
-      </section>
+      <section data-transition="linear">
+        <h2>Other container things in OpenStack</h2>
 
+        <ul>
+          <li>Nova Docker driver<br /> <a
+            href="https://github.com/stackforge/nova-docker">https://github.com/stackforge/nova-docker</a></li>
+          <li>Heat contrib docker API resource plugin</li>
+          <li>OpenStack Magnum multi-tenant container API <br /> <a
+            href="https://github.com/stackforge/magnum">https://github.com/stackforge/magnum</a></li>
+          <li>Heat templates for Atomic based Kubernetes cluster<br />
+            <a href="https://github.com/larsks/heat-kubernetes">https://github.com/larsks/heat-kubernetes</a></li>
+        </ul>
+      </section>
       <section>
         <h2>Get the code</h2>
+        <ul>
+          <li><a
+            href="https://github.com/steveb/docker-heat-templates">https://github.com/steveb/docker-heat-templates</a></li>
+        </ul>
       </section>
       <section>
         <h2>Questions?</h2>
@@ -218,21 +360,13 @@ See What Made These LCA Steampunk Cosplayers Scream
           / <a href="http://twitter.com/stevebake">@stevebake</a>
         </p>
       </section>
-      <section>
-        <h1>Basic HTML Test</h1>
-        <div data-svg-fragment="test.svg#[*|label=base]">
-          <a class="fragment" title="[*|label=fragment1]"></a> <a
-            class="fragment" title="[*|label=fragment2]"></a>
-        </div>
-      </section>
-      <section>
-        <h1>Basic HTML Test 2</h1>
-        <div data-svg-fragment="test.svg#[*|label=base]"></div>
-      </section>
+
     </div>
 
   </div>
-
+  <img
+    style="position: fixed; width: 15%; z-index: 30; bottom: 20px; left: 20px;"
+    src="RH_logo-trans_reverse.png" />
   <script src="lib/js/head.min.js"></script>
   <script src="js/reveal.min.js"></script>
 
