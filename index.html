@@ -63,7 +63,7 @@ See What Made These LCA Steampunk Cosplayers Scream
         <h3>with golden images, Heat and Docker</h3>
         <!-- TWEET: 19 Slides On Orchestration You Should Never Tweet To A Screaming Child 
              https://linux.conf.au/schedule/30047/view_talk -->
-        <img width="470" src="tweet1.jpg">
+        <img width="470" src="tweet1.jpg" border="0">
         <p>
           <small>Steve Baker / <a
             href="mailto:sbaker@redhat.com">sbaker@redhat.com</a> / <a
@@ -129,20 +129,24 @@ See What Made These LCA Steampunk Cosplayers Scream
       <section>
         <h2>Building a stand-alone heat appliance</h2>
         <ul>
-          <li class="fragment">For running latest heat against public clouds</li>
+          <li class="fragment">For running latest heat against
+            public clouds</li>
         </ul>
       </section>
 
-      <section>
+      <section data-transition="fade">
         <h2>Heat architecture</h2>
+        <img width="600" src="heat-architecture-plain-1.svg">
       </section>
 
-      <section>
+      <section data-transition="fade">
         <h2>Heat HA architecture</h2>
+        <img width="600" src="heat-architecture-plain-2.svg">
       </section>
 
-      <section>
-        <h2>Heat stand-alone docker architecture</h2>
+      <section data-transition="fade">
+        <h2>Heat appliance pod</h2>
+        <img width="600" src="heat-architecture-plain-3.svg">
       </section>
 
       <section>
@@ -194,7 +198,8 @@ See What Made These LCA Steampunk Cosplayers Scream
             host - <em>docker/kubelet</em>
           </li>
           <li class="fragment">(future) config driving
-            heat-provisioned cluster - <em>etcd / mesosphere</em>
+            heat-provisioned cluster - <em>kubernetes / etcd /
+              mesos</em>
           </li>
         </ul>
       </section>
@@ -240,7 +245,7 @@ See What Made These LCA Steampunk Cosplayers Scream
 				history : true,
 				center : true,
 
-				theme : 'simple', // available themes are in /css/theme
+				theme : 'lca', // available themes are in /css/theme
 				transition : Reveal.getQueryHash().transition || 'default', // default/cube/page/concave/zoom/linear/fade/none
 
 				// Parallax scrolling
