@@ -71,9 +71,33 @@ See What Made These LCA Steampunk Cosplayers Scream
         </p>
       </section>
 
-      <section>
+      <section data-transition="fade">
         <h2>What is Heat?</h2>
+        <p>Heat is a REST service for the declarative orchestration
+          of multi-tenant OpenStack cloud services.</p>
       </section>
+
+      <section data-transition="fade">
+        <h2>
+          What is <strike>Heat</strike> Kubernetes?
+        </h2>
+        <p>
+          <strike>Heat</strike> Kubernetes is a REST service for the
+          declarative orchestration of <strike>multi-tenant
+            OpenStack cloud services</strike> containers.
+        </p>
+      </section>
+
+      <section>
+        <h2>Declarative vs Procedural Orchestration</h2>
+        <!-- TWEET: Declarative and Procedural Orchestration Explained. First You'll Be Shocked, Then You'll Be Inspired -->
+        <ul>
+          <li>Procedural/Imperative describes a list of
+            instructions to execute</li>
+          <li>Declarative describes the desired state</li>
+        </ul>
+      </section>
+
       <section>
         <h2>Declarative Heat templates</h2>
         <pre>
@@ -81,7 +105,6 @@ See What Made These LCA Steampunk Cosplayers Scream
 parameters:
   key_name:
     type: string
-    default: heat_key
 
 resources:
   server:
@@ -96,68 +119,17 @@ outputs:
     value: {get_attr: [server, first_address]}</code>
         </pre>
       </section>
-      <section>
-        <h2>Declarative vs Procedural Orchestration</h2>
-        <!-- TWEET: Declarative and Procedural Orchestration Explained. First You'll Be Shocked, Then You'll Be Inspired -->
 
-        <img width="470" src="tweet1.jpg">
-      </section>
-
-      <section data-transition="linear">
-        <h2>Kubernetes vs Heat</h2>
-        <p>Heat is a REST service for the declarative orchestration
-          of multi-tenant cloud services.</p>
-        <p>Kubernetes is a REST service for the declarative
-          orchestration of containers.</p>
-      </section>
-
-      <section data-transition="linear">
-        <h2>Orchestrating containers</h2>
-      </section>
-
-
-      <section>
-        <h2>Images and Security</h2>
-        <!-- TWEET: Someone Ran Docker Pull. You Won't Believe What Happens Next https://securityblog.redhat.com/2014/12/18/before-you-initiate-a-docker-pull/ -->
-        <p>
-          <q cite="https://titanous.com/posts/docker-insecurity">&ldquo;...the
-            code responsible for downloading images is shockingly
-            insecure. Users should only download images whose provenance
-            is without question. At present, this does not include
-            “trusted” images hosted by Docker, Inc&rdquo;</q> - Jonathan
-          Rudenberg
-        </p>
-        <p>
-          <a href="https://titanous.com/posts/docker-insecurity">https://titanous.com/posts/docker-insecurity</a>
-        </p>
-      </section>
-      <section>
-        <h2>Images and Security</h2>
-        <!-- TWEET: Someone Ran Docker Pull. You Won't Believe What Happens Next https://securityblog.redhat.com/2014/12/18/before-you-initiate-a-docker-pull/ -->
-        <p>
-          <q
-            cite="https://securityblog.redhat.com/2014/12/18/before-you-initiate-a-docker-pull/">
-
-            &ldquo;...one of the most important ways you can protect
-            yourself when using Docker images is to make sure you only
-            use content from a source you trust and to separate the
-            download and unpack/install steps. The easiest way to do
-            this is simply to not use “docker pull” command.&rdquo;</q> -
-          Trevor Jay
-        </p>
-        <p>
-          <a
-            href="https://securityblog.redhat.com/2014/12/18/before-you-initiate-a-docker-pull/">https://securityblog.redhat.com/2014/12/18/before-you-initiate-a-docker-pull/</a>
-        </p>
-      </section>
-
+      <!-- 
+What you don't get with kubelet vs full kubernetes
+- service load balancing
+- no scheduler - requires manual placement of pods
+- 
+ -->
 
       <section>
         <h2>Building a stand-alone heat appliance</h2>
-        <ul>
-          <li class="fragment">For running latest heat against
-            public clouds</li>
-        </ul>
+        To run the latest heat against a cloud with no (or older) heat
       </section>
 
       <section data-transition="fade">
@@ -204,8 +176,8 @@ CMD ["/start.sh"]
         <ul>
           <li>Built using <code>diskimage-builder</code></li>
 
-          <li>Uses the heat-config-kubelet element from the
-            heat-templates repository <br /> <a
+          <li>Uses the <code>heat-config-kubelet</code> element
+            from the <code>heat-templates</code> repository <br /> <a
             href="https://github.com/openstack/heat-templates/tree/master/hot/software-config">https://github.com/openstack/heat-templates/tree/master/hot/software-config</a>
           </li>
           <li>Currently Fedora only (lots of systemd)</li>
@@ -215,9 +187,46 @@ CMD ["/start.sh"]
       </section>
 
       <section>
+        <h2>Images and Security</h2>
+        <!-- TWEET: Someone Ran Docker Pull. You Won't Believe What Happens Next https://securityblog.redhat.com/2014/12/18/before-you-initiate-a-docker-pull/ -->
+        <p>
+          <q cite="https://titanous.com/posts/docker-insecurity">&ldquo;...the
+            code responsible for downloading images is shockingly
+            insecure. Users should only download images whose provenance
+            is without question. At present, this does not include
+            “trusted” images hosted by Docker, Inc&rdquo;</q> - Jonathan
+          Rudenberg
+        </p>
+        <p>
+          <a href="https://titanous.com/posts/docker-insecurity">https://titanous.com/posts/docker-insecurity</a>
+        </p>
+      </section>
+
+      <section>
+        <h2>Images and Security</h2>
+        <!-- TWEET: Someone Ran Docker Pull. You Won't Believe What Happens Next https://securityblog.redhat.com/2014/12/18/before-you-initiate-a-docker-pull/ -->
+        <p>
+          <q
+            cite="https://securityblog.redhat.com/2014/12/18/before-you-initiate-a-docker-pull/">
+
+            &ldquo;...one of the most important ways you can protect
+            yourself when using Docker images is to make sure you only
+            use content from a source you trust and to separate the
+            download and unpack/install steps. The easiest way to do
+            this is simply to not use “docker pull” command.&rdquo;</q> -
+          Trevor Jay
+        </p>
+        <p>
+          <a
+            href="https://securityblog.redhat.com/2014/12/18/before-you-initiate-a-docker-pull/">https://securityblog.redhat.com/2014/12/18/before-you-initiate-a-docker-pull/</a>
+        </p>
+      </section>
+
+      <section>
         <h2>Writing the heat template</h2>
         <pre>
-          <code class="nohighlight">  heat_pod_config:
+          <code class="nohighlight">resources:
+  heat_pod_config:
     type: OS::Heat::StructuredConfig
     properties:
       group: kubelet
@@ -307,6 +316,18 @@ CMD ["/start.sh"]
 
       <section>
         <h2>Launching the stack</h2>
+        <ul>
+          <li>Heat launches VM with kubelet-enabled image</li>
+          <li>Heat builds data describing pods to create</li>
+          <li>VM agent fetches data, writes out pod template files</li>
+          <li>Kubelet picks up files, creates containers</li>
+          <li>VM agent monitors for container creation, signals
+            Heat with results</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Launching the stack</h2>
         <video width="1024" controls>
           <source src="heat-docker.webm" type="video/webm">
         </video>
@@ -314,6 +335,13 @@ CMD ["/start.sh"]
 
       <section>
         <h2>Lifecycle of container stacks</h2>
+        <ul>
+          <li>Image releases handled with heat stack-update</li>
+          <li>Container architecture changes handled with heat
+            stack-update</li>
+          <li>Other workflows handled procedurally (with zero or
+            more stack-updates)</li>
+        </ul>
       </section>
 
       <section>
@@ -324,7 +352,7 @@ CMD ["/start.sh"]
           <li class="fragment">config/deployment resources - <em>shell
               / puppet / ansible etc</em></li>
           <li class="fragment">config fed to service running on
-            host - <em>docker/kubelet</em>
+            host - <em>docker / kubelet</em>
           </li>
           <li class="fragment">(future) config driving
             heat-provisioned cluster - <em>kubernetes / etcd /
@@ -333,25 +361,27 @@ CMD ["/start.sh"]
         </ul>
       </section>
 
-      <section data-transition="linear">
+      <section>
         <h2>Other container things in OpenStack</h2>
 
         <ul>
-          <li>Nova Docker driver<br /> <a
+          <li class="fragment">Nova Docker driver<br /> <a
             href="https://github.com/stackforge/nova-docker">https://github.com/stackforge/nova-docker</a></li>
-          <li>Heat contrib docker API resource plugin</li>
-          <li>OpenStack Magnum multi-tenant container API <br /> <a
-            href="https://github.com/stackforge/magnum">https://github.com/stackforge/magnum</a></li>
-          <li>Heat templates for Atomic based Kubernetes cluster<br />
-            <a href="https://github.com/larsks/heat-kubernetes">https://github.com/larsks/heat-kubernetes</a></li>
+          <li class="fragment">Heat contrib docker API resource
+            plugin</li>
+          <li class="fragment">OpenStack Magnum multi-tenant
+            container API <br /> <a
+            href="https://github.com/stackforge/magnum">https://github.com/stackforge/magnum</a>
+          </li>
+          <li class="fragment">Heat templates for Atomic based
+            Kubernetes cluster<br /> <a
+            href="https://github.com/larsks/heat-kubernetes">https://github.com/larsks/heat-kubernetes</a>
+          </li>
         </ul>
       </section>
       <section>
         <h2>Get the code</h2>
-        <ul>
-          <li><a
-            href="https://github.com/steveb/docker-heat-templates">https://github.com/steveb/docker-heat-templates</a></li>
-        </ul>
+        <a href="https://github.com/steveb/docker-heat-templates">https://github.com/steveb/docker-heat-templates</a>
       </section>
       <section>
         <h2>Questions?</h2>
