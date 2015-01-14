@@ -71,6 +71,16 @@ See What Made These LCA Steampunk Cosplayers Scream
         </p>
       </section>
 
+      <section>
+        <h2>Declarative vs Procedural Orchestration</h2>
+        <!-- TWEET: Declarative and Procedural Orchestration Explained. First You'll Be Shocked, Then You'll Be Inspired -->
+        <ul>
+          <li>Procedural/Imperative describes a list of
+            instructions to execute</li>
+          <li>Declarative describes the desired state</li>
+        </ul>
+      </section>
+
       <section data-transition="fade">
         <h2>What is Heat?</h2>
         <p>Heat is a REST service for the declarative orchestration
@@ -89,17 +99,44 @@ See What Made These LCA Steampunk Cosplayers Scream
       </section>
 
       <section>
-        <h2>Declarative vs Procedural Orchestration</h2>
-        <!-- TWEET: Declarative and Procedural Orchestration Explained. First You'll Be Shocked, Then You'll Be Inspired -->
+        <h2>I want to orchestrate containers in an OpenStack cloud</h2>
         <ul>
-          <li>Procedural/Imperative describes a list of
-            instructions to execute</li>
-          <li>Declarative describes the desired state</li>
+          <li data-transition="fade">No OpenStack container API :(</li>
+          <li data-transition="fade">Kubernetes / Docker are not
+            multi-tenant APIs ;(</li>
         </ul>
       </section>
 
       <section>
-        <h2>Declarative Heat templates</h2>
+        <h2>Evolution of Heat software configuration</h2>
+        <ul>
+          <li class="fragment">boot-time config - <em>user-data
+              script + cfn-init metadata, cloud-init / cloud-config</em></li>
+          <li class="fragment">config/deployment resources - <em>shell
+              / puppet / ansible etc</em></li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Kubelet</h2>
+        <p>Processes a container manifest so the containers are
+          launched according to how they are described.</p>
+      </section>
+
+      <section>
+        <h2>What is a pod?</h2>
+      </section>
+
+      <section>
+        <h2>What you don't get with kubelet vs full kubernetes</h2>
+        <ul>
+          <li>no service load balancing</li>
+          <li>no scheduler - requires manual placement of pods</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Declarative Heat template</h2>
         <pre>
         <code>heat_template_version: 2014-10-16
 parameters:
@@ -119,13 +156,6 @@ outputs:
     value: {get_attr: [server, first_address]}</code>
         </pre>
       </section>
-
-      <!-- 
-What you don't get with kubelet vs full kubernetes
-- service load balancing
-- no scheduler - requires manual placement of pods
-- 
- -->
 
       <section>
         <h2>Building a stand-alone heat appliance</h2>
@@ -296,7 +326,7 @@ CMD ["/start.sh"]
   heat_pod_deployment:
     type: OS::Heat::StructuredDeployment
     properties:
-      name: 20_apache_deployment
+      name: 20_kubelet_deployment
       config:
         get_resource: heat_pod_config
       server:
@@ -317,12 +347,18 @@ CMD ["/start.sh"]
       <section>
         <h2>Launching the stack</h2>
         <ul>
-          <li>Heat launches VM with kubelet-enabled image</li>
-          <li>Heat builds data describing pods to create</li>
-          <li>VM agent fetches data, writes out pod template files</li>
-          <li>Kubelet picks up files, creates containers</li>
-          <li>VM agent monitors for container creation, signals
-            Heat with results</li>
+          <li>You launch the heat-standalone
+            template</li>
+          <li class="fragment">Heat launches VM with
+            kubelet-enabled image</li>
+          <li class="fragment">Heat builds data describing pods to
+            create</li>
+          <li class="fragment">VM agent fetches data, writes out
+            pod template files</li>
+          <li class="fragment">Kubelet picks up files, creates
+            containers</li>
+          <li class="fragment">VM agent monitors for container
+            creation, signals Heat with results</li>
         </ul>
       </section>
 
@@ -347,9 +383,9 @@ CMD ["/start.sh"]
       <section>
         <h2>Evolution of Heat software configuration</h2>
         <ul>
-          <li class="fragment">boot-time config - <em>user-data
-              script + cfn-init metadata</em></li>
-          <li class="fragment">config/deployment resources - <em>shell
+          <li>boot-time config - <em>user-data
+              script + cfn-init metadata, cloud-init / cloud-config</em></li>
+          <li>config/deployment resources - <em>shell
               / puppet / ansible etc</em></li>
           <li class="fragment">config fed to service running on
             host - <em>docker / kubelet</em>
@@ -358,6 +394,17 @@ CMD ["/start.sh"]
             heat-provisioned cluster - <em>kubernetes / etcd /
               mesos</em>
           </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Next steps</h2>
+        <ul>
+          <li>Expose cAdvisor stats as deployment outputs</li>
+          <li>Bring up a full Kubernetes cluster with heat, define
+            containers in heat template, use unmodified Atomic OS image</li>
+          <li>Encourage Kubernetes to declare stable interfaces for
+            its components</li>
         </ul>
       </section>
 
@@ -382,6 +429,8 @@ CMD ["/start.sh"]
       <section>
         <h2>Get the code</h2>
         <a href="https://github.com/steveb/docker-heat-templates">https://github.com/steveb/docker-heat-templates</a>
+        <a
+          href="https://github.com/openstack/heat-templates/tree/master/hot/software-config">https://github.com/openstack/heat-templates/tree/master/hot/software-config</a>
       </section>
       <section>
         <h2>Questions?</h2>
