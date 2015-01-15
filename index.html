@@ -1,0 +1,518 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+<meta charset="utf-8">
+
+<title>Deploying to the cloud with golden images, Heat and
+  Docker</title>
+
+<meta name="description"
+  content="A framework for easily creating beautiful presentations using HTML">
+<meta name="author" content="Steve Baker">
+
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style"
+  content="black-translucent" />
+
+<meta name="viewport"
+  content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<link rel="stylesheet" href="css/reveal.css">
+<link rel="stylesheet" href="css/theme/default.css" id="theme">
+
+<!-- For syntax highlighting -->
+<link rel="stylesheet" href="lib/css/zenburn.css">
+
+<!-- If the query includes 'print-pdf', include the PDF print sheet -->
+<script>
+	if (window.location.search.match(/print-pdf/gi)) {
+		var link = document.createElement('link');
+		link.rel = 'stylesheet';
+		link.type = 'text/css';
+		link.href = 'css/print/pdf.css';
+		document.getElementsByTagName('head')[0].appendChild(link);
+	}
+</script>
+
+<!--[if lt IE 9]>
+    <script src="lib/js/html5shiv.js"></script>
+    <![endif]-->
+</head>
+
+<body>
+
+  <div class="reveal">
+
+    <!-- 
+Tweets
+
+
+3 Things You'd Remember If You Didn't Go to MOTAT
+
+Why Docker Makes Devops Squeal With Delight And Then Cry In Despair
+
+See What Made These LCA Steampunk Cosplayers Scream
+
+
+
+-->
+    <div class="slides">
+      <section>
+        <h2>Deploying to the cloud</h2>
+        <h3>with golden images, Heat and Docker</h3>
+        <!-- TWEET: 19 Slides On Orchestration You Should Never Tweet To A Screaming Child 
+             https://linux.conf.au/schedule/30047/view_talk -->
+        <img  class="fragment" width="580" src="clickbait.jpg">
+        <p>
+          <small>Steve Baker / <a
+            href="mailto:sbaker@redhat.com">sbaker@redhat.com</a> / <a
+            href="http://twitter.com/stevebake">@stevebake</a></small>
+        </p>
+      </section>
+
+      <section>
+        <h2>Declarative vs Procedural Orchestration</h2>
+        <!-- TWEET: Declarative and Procedural Orchestration Explained. First You'll Be Shocked, Then You'll Be Inspired -->
+        <ul>
+          <li>Procedural/Imperative describes a list of
+            instructions to execute</li>
+          <li>Declarative describes the desired state</li>
+        </ul>
+      </section>
+
+      <section data-transition="fade">
+        <h2>What is Heat?</h2>
+        <p>Heat is a REST service for the declarative orchestration
+          of multi-tenant OpenStack cloud services.</p>
+      </section>
+
+      <section data-transition="fade">
+        <h2>
+          What is <strike>Heat</strike> Kubernetes?
+        </h2>
+        <p>
+          <strike>Heat</strike> Kubernetes is a REST service for the
+          declarative orchestration of <strike>multi-tenant
+            OpenStack cloud services</strike> containers.
+        </p>
+      </section>
+
+      <section>
+        <h2>I want to orchestrate containers in an OpenStack cloud</h2>
+        <ul>
+          <li data-transition="fade">No OpenStack container API :(</li>
+          <li data-transition="fade">Kubernetes / Docker are not
+            multi-tenant APIs ;(</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Evolution of Heat software configuration</h2>
+        <ul>
+          <li class="fragment">boot-time config - <em>user-data
+              script + cfn-init metadata, cloud-init / cloud-config</em></li>
+          <li class="fragment">config/deployment resources - <em>shell
+              / puppet / ansible etc</em></li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Kubelet</h2>
+        <p>Processes a container manifest so the containers are
+          launched according to how they are described.</p>
+      </section>
+
+      <section>
+        <h2>What is a pod?</h2>
+      </section>
+
+      <section>
+        <h2>What you don't get with kubelet vs full kubernetes</h2>
+        <ul>
+          <li>no service load balancing</li>
+          <li>no scheduler - requires manual placement of pods</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Declarative Heat template</h2>
+        <pre>
+        <code>heat_template_version: 2014-10-16
+parameters:
+  key_name:
+    type: string
+
+resources:
+  server:
+    type: OS::Nova::Server
+    properties:
+      image: Fedora-x86_64-20-20140618-sda
+      flavor: m1.small
+      key_name: {get_param: key_name}
+
+outputs:
+  server_ip:
+    value: {get_attr: [server, first_address]}</code>
+        </pre>
+      </section>
+
+      <section>
+        <h2>Building a stand-alone heat appliance</h2>
+        To run the latest heat against a cloud with no (or older) heat
+      </section>
+
+      <section data-transition="fade">
+        <h2>Heat architecture</h2>
+        <img width="600" src="heat-architecture-plain-1.svg">
+      </section>
+
+      <section data-transition="fade">
+        <h2>Heat HA architecture</h2>
+        <img width="600" src="heat-architecture-plain-2.svg">
+      </section>
+
+      <section data-transition="fade">
+        <h2>Heat appliance pod</h2>
+        <img width="600" src="heat-architecture-plain-3.svg">
+      </section>
+
+      <section>
+        <h2>Building the docker image</h2>
+        <pre>
+          <code class="nohighlight">
+# heat-base-standalone/Dockerfile
+FROM fedora:20
+MAINTAINER Steve Baker &lt;steve@stevebaker.org>
+
+ADD heat /opt/heat
+ADD install-heat.sh /opt/install-heat.sh
+RUN /opt/install-heat.sh
+ADD config-heat.sh /opt/heat/config-heat.sh
+
+# heat-api-standalone/Dockerfile
+FROM stevebake/heat-base-standalone
+MAINTAINER Steve Baker &lt;steve@stevebaker.org>
+
+ADD ./start.sh /start.sh
+
+CMD ["/start.sh"]
+</code>
+</pre>
+      </section>
+
+      <section>
+        <h2>Building the VM image</h2>
+        <ul>
+          <li>Built using <code>diskimage-builder</code></li>
+
+          <li>Uses the <code>heat-config-kubelet</code> element
+            from the <code>heat-templates</code> repository <br /> <a
+            href="https://github.com/openstack/heat-templates/tree/master/hot/software-config">https://github.com/openstack/heat-templates/tree/master/hot/software-config</a>
+          </li>
+          <li>Currently Fedora only (lots of systemd)</li>
+          <li>Includes a tar file of docker images for import on
+            boot</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Images and Security</h2>
+        <!-- TWEET: Someone Ran Docker Pull. You Won't Believe What Happens Next https://securityblog.redhat.com/2014/12/18/before-you-initiate-a-docker-pull/ -->
+        <p>
+          <q cite="https://titanous.com/posts/docker-insecurity">&ldquo;...the
+            code responsible for downloading images is shockingly
+            insecure. Users should only download images whose provenance
+            is without question. At present, this does not include
+            “trusted” images hosted by Docker, Inc&rdquo;</q> - Jonathan
+          Rudenberg
+        </p>
+        <p>
+          <a href="https://titanous.com/posts/docker-insecurity">https://titanous.com/posts/docker-insecurity</a>
+        </p>
+      </section>
+
+      <section>
+        <h2>Images and Security</h2>
+        <!-- TWEET: Someone Ran Docker Pull. You Won't Believe What Happens Next https://securityblog.redhat.com/2014/12/18/before-you-initiate-a-docker-pull/ -->
+        <p>
+          <q
+            cite="https://securityblog.redhat.com/2014/12/18/before-you-initiate-a-docker-pull/">
+
+            &ldquo;...one of the most important ways you can protect
+            yourself when using Docker images is to make sure you only
+            use content from a source you trust and to separate the
+            download and unpack/install steps. The easiest way to do
+            this is simply to not use “docker pull” command.&rdquo;</q> -
+          Trevor Jay
+        </p>
+        <p>
+          <a
+            href="https://securityblog.redhat.com/2014/12/18/before-you-initiate-a-docker-pull/">https://securityblog.redhat.com/2014/12/18/before-you-initiate-a-docker-pull/</a>
+        </p>
+      </section>
+
+      <section>
+        <h2>Writing the heat template</h2>
+        <pre>
+          <code class="nohighlight">resources:
+  heat_pod_config:
+    type: OS::Heat::StructuredConfig
+    properties:
+      group: kubelet
+      config:
+        version: v1beta2
+        containers:
+
+        - name: rabbitmq
+          image: {get_input: rabbitmq_image}
+          ports:
+          - containerPort: 5672
+            hostPort: 5672
+
+        - name: mariadb
+          image: {get_input: mariadb_image}
+          ports:
+          - containerPort: 3306
+            hostPort: 3306
+          env:
+          - name: DB_ROOT_PASSWORD
+            value: {get_input: mariadb_password}
+          volumeMounts:
+            - name: mariadb-data
+              mountPath: /var/lib/mysql
+
+        - name: heat-engine
+          image: {get_input: heat_engine_image}
+          env:
+          - name: RABBIT_PASSWORD
+            value: guest
+          - name: DB_ROOT_PASSWORD
+            value: {get_input: mariadb_password}
+          - name: HEAT_DB_PASSWORD
+            value: {get_input: heatdb_password}
+          - name: KEYSTONE_PUBLIC_SERVICE_HOST
+            value: {get_input: keystone_host}
+          - name: AUTH_ENCRYPTION_KEY
+            value: {get_input: heat_auth_encryption_key}
+          - name: HEAT_API_SERVICE_HOST
+            value: {get_input: heat_api_service_host}
+          - name: OS_AUTH_URL
+            value: {get_input: os_auth_url}
+
+        - name: heat-api
+          image: {get_input: heat_api_image}
+          ports:
+          - containerPort: 8004
+            hostPort: 8004
+          env:
+          - name: RABBIT_PASSWORD
+            value: guest
+          - name: DB_ROOT_PASSWORD
+            value: {get_input: mariadb_password}
+          - name: HEAT_DB_PASSWORD
+            value: {get_input: heatdb_password}
+          - name: KEYSTONE_PUBLIC_SERVICE_HOST
+            value: {get_input: keystone_host}
+          - name: AUTH_ENCRYPTION_KEY
+            value: {get_input: heat_auth_encryption_key}
+          - name: HEAT_API_SERVICE_HOST
+            value: {get_input: heat_api_service_host}
+          - name: OS_AUTH_URL
+            value: {get_input: os_auth_url}
+        volumes:
+        - name: mariadb-data
+
+  heat_pod_deployment:
+    type: OS::Heat::StructuredDeployment
+    properties:
+      name: 20_kubelet_deployment
+      config:
+        get_resource: heat_pod_config
+      server:
+        get_resource: server
+      input_values:
+        mariadb_image: {get_param: mariadb_image}
+        mariadb_password: {get_resource: mariadb_password}
+        rabbitmq_image: {get_param: rabbitmq_image}
+        heat_api_image: {get_param: heat_api_image}
+        heat_engine_image: {get_param: heat_engine_image}
+        heatdb_password: {get_resource: heatdb_password}
+        heat_auth_encryption_key: {get_resource: heat_auth_encryption_key}
+        heat_api_service_host: {get_attr: [server, first_address]}
+        os_auth_url: {get_param: os_auth_url}</code>
+        </pre>
+      </section>
+
+      <section>
+        <h2>Launching the stack</h2>
+        <ul>
+          <li>You launch the heat-standalone
+            template</li>
+          <li class="fragment">Heat launches VM with
+            kubelet-enabled image</li>
+          <li class="fragment">Heat builds data describing pods to
+            create</li>
+          <li class="fragment">VM agent fetches data, writes out
+            pod template files</li>
+          <li class="fragment">Kubelet picks up files, creates
+            containers</li>
+          <li class="fragment">VM agent monitors for container
+            creation, signals Heat with results</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Launching the stack</h2>
+        <video width="1024" controls>
+          <source src="heat-docker.webm" type="video/webm">
+        </video>
+      </section>
+
+      <section>
+        <h2>Lifecycle of container stacks</h2>
+        <ul>
+          <li>Image releases handled with heat stack-update</li>
+          <li>Container architecture changes handled with heat
+            stack-update</li>
+          <li>Other workflows handled procedurally (with zero or
+            more stack-updates)</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Evolution of Heat software configuration</h2>
+        <ul>
+          <li>boot-time config - <em>user-data
+              script + cfn-init metadata, cloud-init / cloud-config</em></li>
+          <li>config/deployment resources - <em>shell
+              / puppet / ansible etc</em></li>
+          <li class="fragment">config fed to service running on
+            host - <em>docker / kubelet</em>
+          </li>
+          <li class="fragment">(future) config driving
+            heat-provisioned cluster - <em>kubernetes / etcd /
+              mesos</em>
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Next steps</h2>
+        <ul>
+          <li>Expose cAdvisor stats as deployment outputs</li>
+          <li>Bring up a full Kubernetes cluster with heat, define
+            containers in heat template, use unmodified Atomic OS image</li>
+          <li>Encourage Kubernetes to declare stable interfaces for
+            its components</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Other container things in OpenStack</h2>
+
+        <ul>
+          <li class="fragment">Nova Docker driver<br /> <a
+            href="https://github.com/stackforge/nova-docker">https://github.com/stackforge/nova-docker</a></li>
+          <li class="fragment">Heat contrib docker API resource
+            plugin</li>
+          <li class="fragment">OpenStack Magnum multi-tenant
+            container API <br /> <a
+            href="https://github.com/stackforge/magnum">https://github.com/stackforge/magnum</a>
+          </li>
+          <li class="fragment">Heat templates for Atomic based
+            Kubernetes cluster<br /> <a
+            href="https://github.com/larsks/heat-kubernetes">https://github.com/larsks/heat-kubernetes</a>
+          </li>
+        </ul>
+      </section>
+      <section>
+        <h2>Get the code</h2>
+        <a href="https://github.com/steveb/docker-heat-templates">https://github.com/steveb/docker-heat-templates</a>
+        <a
+          href="https://github.com/openstack/heat-templates/tree/master/hot/software-config">https://github.com/openstack/heat-templates/tree/master/hot/software-config</a>
+      </section>
+      <section>
+        <h2>Questions?</h2>
+        <p>
+          Steve Baker / <a href="mailto:sbaker@redhat.com">sbaker@redhat.com</a>
+          / <a href="http://twitter.com/stevebake">@stevebake</a>
+        </p>
+      </section>
+
+    </div>
+
+  </div>
+  <img
+    style="position: fixed; width: 15%; z-index: 30; bottom: 20px; left: 20px;"
+    src="RH_logo-trans_reverse.png" />
+  <script src="lib/js/head.min.js"></script>
+  <script src="js/reveal.min.js"></script>
+
+  <script>
+			// Full list of configuration options available here:
+			// https://github.com/hakimel/reveal.js#configuration
+			Reveal.initialize({
+				controls : true,
+				progress : true,
+				history : true,
+				center : true,
+
+				theme : 'lca', // available themes are in /css/theme
+				transition : Reveal.getQueryHash().transition || 'default', // default/cube/page/concave/zoom/linear/fade/none
+
+				// Parallax scrolling
+				// parallaxBackgroundImage: 'https://s3.amazonaws.com/hakim-static/reveal-js/reveal-parallax-1.jpg',
+				// parallaxBackgroundSize: '2100px 900px',
+
+				// Optional libraries used to extend on reveal.js
+				dependencies : [ {
+					src : 'lib/js/classList.js',
+					condition : function() {
+						return !document.body.classList;
+					}
+				}, {
+					src : 'plugin/markdown/marked.js',
+					condition : function() {
+						return !!document.querySelector('[data-markdown]');
+					}
+				}, {
+					src : 'plugin/markdown/markdown.js',
+					condition : function() {
+						return !!document.querySelector('[data-markdown]');
+					}
+				}, {
+					src : 'plugin/highlight/highlight.js',
+					async : true,
+					callback : function() {
+						hljs.initHighlightingOnLoad();
+					}
+				}, {
+					src : 'plugin/zoom-js/zoom.js',
+					async : true,
+					condition : function() {
+						return !!document.body.classList;
+					}
+				}, {
+					src : 'plugin/notes/notes.js',
+					async : true,
+					condition : function() {
+						return !!document.body.classList;
+					}
+				}, {
+					// maybe you put this in `plugins`
+					src : 'plugin/svg-fragment/reveal-svg-fragment.js',
+					condition : function() {
+						return !!document.querySelector('[data-svg-fragment]');
+					}
+				// Additional options
+				// defaults to using already-loaded version, or CDN
+				//d3: "./d3.min.js",
+				// use a different attribute for your fragment selector
+				//selector: "title",
+				} ]
+			});
+		</script>
+
+</body>
+</html>
